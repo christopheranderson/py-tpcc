@@ -37,13 +37,15 @@ import time
 import multiprocessing
 from ConfigParser import SafeConfigParser
 from pprint import pprint,pformat
+from prometheus_client import start_http_server
 
 from util import *
 from runtime import *
 import drivers
 
+PID = os.getpid()
 logging.basicConfig(level = logging.INFO,
-                    format="%(asctime)s [%(funcName)s:%(lineno)03d] %(levelname)-5s: %(message)s",
+                    format="%(asctime)s [PID:{0}][%(funcName)s:%(lineno)03d] %(levelname)-5s: %(message)s".format(PID),
                     datefmt="%m-%d-%Y %H:%M:%S",
                     stream = sys.stdout)
                     
@@ -62,7 +64,8 @@ def createDriverClass(name):
 ## ==============================================
 def getDrivers():
     drivers = [ ]
-    for f in map(lambda x: os.path.basename(x).replace("driver.py", ""), glob.glob("./drivers/*driver.py")):
+    path_to_drivers = os.path.join(os.path.dirname(os.path.realpath(__file__)), "drivers/*driver.py")
+    for f in [os.path.basename(x).replace("driver.py", "") for x in glob.glob("./drivers/*driver.py")]:
         if f != "abstract": drivers.append(f)
     return (drivers)
 ## DEF
@@ -174,22 +177,23 @@ def executorFunc(driverClass, scaleParameters, args, config, debug):
 ## main
 ## ==============================================
 if __name__ == '__main__':
-    aparser = argparse.ArgumentParser(description='Python implementation of the TPC-C Benchmark')
+    aparser = argparse.ArgumentParser(
+        description='Python implementation of the TPC-C Benchmark')
     aparser.add_argument('system', choices=getDrivers(),
                          help='Target system driver')
-    aparser.add_argument('--config', type=file,
+    aparser.add_argument('--config', '-C', type=file,
                          help='Path to driver configuration file')
-    aparser.add_argument('--reset', action='store_true',
+    aparser.add_argument('--reset', '-R', action='store_true',
                          help='Instruct the driver to reset the contents of the database')
-    aparser.add_argument('--scalefactor', default=1, type=float, metavar='SF',
+    aparser.add_argument('--scalefactor', '-s', default=1, type=float, metavar='SF',
                          help='Benchmark scale factor')
-    aparser.add_argument('--warehouses', default=4, type=int, metavar='W',
+    aparser.add_argument('--warehouses', '-w', default=4, type=int, metavar='W',
                          help='Number of Warehouses')
-    aparser.add_argument('--duration', default=60, type=int, metavar='D',
+    aparser.add_argument('--duration', '-d', default=60, type=int, metavar='D',
                          help='How long to run the benchmark in seconds')
     aparser.add_argument('--ddl', default=os.path.realpath(os.path.join(os.path.dirname(__file__), "tpcc.sql")),
                          help='Path to the TPC-C DDL SQL file')
-    aparser.add_argument('--clients', default=1, type=int, metavar='N',
+    aparser.add_argument('--clients', '-c', default=1, type=int, metavar='N',
                          help='The number of blocking clients to fork')
     aparser.add_argument('--stop-on-error', action='store_true',
                          help='Stop the transaction execution when the driver throws an exception.')
@@ -231,6 +235,7 @@ if __name__ == '__main__':
     config['execute'] = False
     if config['reset']: logging.info("Reseting database")
     driver.loadConfig(config)
+    start_http_server(8000)
     logging.info("Initializing TPC-C benchmark using %s" % driver)
 
     ## Create ScaleParameters

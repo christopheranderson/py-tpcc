@@ -1,0 +1,18 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+pymongo = "*"
+azure-mgmt-cosmosdb = "*"
+prometheus-client = "*"
+
+[dev-packages]
+rope = "*"
+pylint = "*"
+autopep8 = "*"
+pycodestyle = "*"
+
+[requires]
+python_version = "2.7"
